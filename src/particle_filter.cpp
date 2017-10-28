@@ -47,7 +47,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], double velocity, double yaw_rate) {
-	// TODO: Add measurements to each particle and add random Gaussian noise.
+	// Add measurements to each particle and add random Gaussian noise.
 	// NOTE: When adding noise you may find std::normal_distribution and std::default_random_engine useful.
 	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
@@ -81,15 +81,30 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
       this->particles[i].theta = phi_theta + noise_theta;
     }
   }
-
 }
 
 void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations) {
-	// TODO: Find the predicted measurement that is closest to each observed measurement and assign the 
-	//   observed measurement to this particular landmark.
+	// Find the predicted measurement that is closest to each observed measurement and assign the
+	// observed measurement to this particular landmark.
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
+  const double ERROR = 1.0e99;
+  for (int i = 0; i < observations.size(); i++) {
+    int current_observation;
+    double current_error = ERROR;
 
+    for (int j = 0; j < predicted.size(); j++) {
+      const double delta_x = predicted[j].x - observations[j].x;
+      const double delta_y = predicted[j].y - observations[j].y;
+      const error = delta_x * delta_x + delta_y + delta_y;
+
+      if (current_error < error) {
+        current_observation = j;
+        current_error = error;
+      }
+    }
+    observations[i].id = current_observation;
+  }
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
