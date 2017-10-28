@@ -6,9 +6,7 @@
  *      Author: Tiffany Huang
  */
 
-#ifndef PARTICLE_FILTER_H_
-#define PARTICLE_FILTER_H_
-
+#pragma once
 #include "helper_functions.h"
 
 struct Particle {
@@ -114,7 +112,3 @@ public:
 		return is_initialized;
 	}
 };
-
-
-
-#endif /* PARTICLE_FILTER_H_ */

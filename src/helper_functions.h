@@ -5,9 +5,7 @@
  *      Author: Tiffany Huang
  */
 
-#ifndef HELPER_FUNCTIONS_H_
-#define HELPER_FUNCTIONS_H_
-
+#pragma once
 #include <sstream>
 #include <fstream>
 #include <math.h>
@@ -240,5 +238,3 @@ inline bool read_landmark_data(std::string filename, std::vector<LandmarkObs>& o
 	}
 	return true;
 }
-
-#endif /* HELPER_FUNCTIONS_H_ */
