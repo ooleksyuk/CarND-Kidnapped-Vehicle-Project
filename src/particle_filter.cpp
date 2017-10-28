@@ -109,7 +109,7 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
     const std::vector<LandmarkObs> &observations, const Map &map_landmarks) {
-  // TODO: Update the weights of each particle using a mult-variate Gaussian distribution. You can read
+  // Update the weights of each particle using a mult-variate Gaussian distribution. You can read
   //   more about this distribution here: https://en.wikipedia.org/wiki/Multivariate_normal_distribution
   // NOTE: The observations are given in the VEHICLE'S coordinate system. Your particles are located
   //   according to the MAP'S coordinate system. You will need to transform between the two systems.
@@ -119,6 +119,29 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
   //   and the following is a good resource for the actual equation to implement (look at equation
   //   3.33
   //   http://planning.cs.uiuc.edu/node99.html
+  const double std_x = std_landmark[0];
+  const double std_y = std_landmark[1];
+  const double num_x = 0.5 / (std_x * std_x);
+  const double num_y = 0.5 / (std_y * std_y);
+  const double denominator = sqrt(2.0 * M_PI * std_x * std_y);
+
+  for (int i = 0; i < NUMBER_OF_PARTICLES; i++) {
+    const double p_x = this->particles[i].x;
+    const double p_y = this->particles[i].y;
+    const double p_theta = this->particles[i].theta;
+
+    vector<LandmarkObs> landmarks_in_range;
+    vector<LandmarkObs> transformed_coordinates;
+
+    /*******************************************************************
+     * STEP 1: Transform coordinates of landmarks from vehicle perspective to
+     * relevant to the position of the particle, pretend that the vehicle is
+     * exactly where the particle is and is oriented the same way as particle
+     */
+    for (int j = 0; j < observations.size(); j++) {
+      double obs_id = observations[j].id;
+    }
+  }
 }
 
 void ParticleFilter::resample() {
