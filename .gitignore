@@ -7,3 +7,5 @@ src/particle_filter_sol.cpp
 src/solutions
 .idea
 cmake-build-debug
+term2_sim_mac
+.DS_Store
