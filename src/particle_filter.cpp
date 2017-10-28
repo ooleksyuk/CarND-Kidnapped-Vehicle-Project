@@ -58,9 +58,9 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
   const double v_theta = MOVING_STRAIGHT ? velocity * delta_t : velocity / yaw_rate;
   const double delta_theta = delta_t * yaw_rate;
 
-  normal_distribution dist_x(INITIAL_COORDINATE, std_pos[0]);
-  normal_distribution dist_y(INITIAL_COORDINATE, std_pos[1]);
-  normal_distribution dist_theta(INITIAL_COORDINATE, std_pos[2]);
+  normal_distribution<double> dist_x(INITIAL_COORDINATE, std_pos[0]);
+  normal_distribution<double> dist_y(INITIAL_COORDINATE, std_pos[1]);
+  normal_distribution<double> dist_theta(INITIAL_COORDINATE, std_pos[2]);
 
   for (int i = 0; i < NUMBER_OF_PARTICLES; i++) {
     const double theta = this->particles[i].theta;
@@ -96,7 +96,7 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
     for (int j = 0; j < predicted.size(); j++) {
       const double delta_x = predicted[j].x - observations[j].x;
       const double delta_y = predicted[j].y - observations[j].y;
-      const error = delta_x * delta_x + delta_y + delta_y;
+      const double error = delta_x * delta_x + delta_y + delta_y;
 
       if (current_error < error) {
         current_observation = j;
@@ -141,7 +141,7 @@ void ParticleFilter::resample() {
     sampled_particles.push_back(particle);
   }
 
-  this->particles.push_back(sampled_particles);
+  this->particles = sampled_particles;
 }
 
 Particle ParticleFilter::SetAssociations(Particle particle, std::vector<int> associations, std::vector<double> sense_x, std::vector<double> sense_y)
