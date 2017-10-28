@@ -26,7 +26,6 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// x, y, theta and their uncertainties from GPS) and all weights to 1.
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
-  is_initialized = true;
   this->num_particles = NUMBER_OF_PARTICLES;
   default_random_engine gen;
   normal_distribution<double> dist_x(x, std[0]);
@@ -41,9 +40,10 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     particle.theta = dist_theta(gen);
     particle.weight = INITIAL_WEIGHT;
 
-    weights.push_back(INITIAL_WEIGHT);
-    particles.push_back(INITIAL_WEIGHT);
+    this->weights.push_back(INITIAL_WEIGHT);
+    this->particles.push_back(INITIAL_WEIGHT);
   }
+  this->is_initialized = true;
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], double velocity, double yaw_rate) {
@@ -51,6 +51,36 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	// NOTE: When adding noise you may find std::normal_distribution and std::default_random_engine useful.
 	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
+  default_random_engine gen;
+  const double THRESHOLD = 0.001;
+  const double INITIAL_COORDINATE = 0.0;
+  const double MOVING_STRAIGHT = fabs(yaw_rate) < THRESHOLD;
+  const double v_theta = MOVING_STRAIGHT ? velocity * delta_t : velocity / yaw_rate;
+  const double delta_theta = delta_t * yaw_rate;
+
+  normal_distribution dist_x(INITIAL_COORDINATE, std_pos[0]);
+  normal_distribution dist_y(INITIAL_COORDINATE, std_pos[1]);
+  normal_distribution dist_theta(INITIAL_COORDINATE, std_pos[2]);
+
+  for (int i = 0; i < NUMBER_OF_PARTICLES; i++) {
+    const double theta = this->particles[i].theta;
+    const double sin_theta = sin(theta);
+    const double cos_theta = cos(theta);
+    const double noise_x = dist_x(gen);
+    const double noise_y = dist_y(gen);
+    const double noise_theta = dist_theta(gen);
+
+    if (MOVING_STRAIGHT) {
+      this->particles[i].x = v_theta * cos_theta + noise_x;
+      this->particles[i].y = v_theta * sin_theta + noise_y;
+      this->particles[i].theta += noise_theta;
+    } else {
+      const double phi_theta = theta + delta_theta;
+      this->particles[i].x = v_theta * (sin(phi_theta) - sin_theta) + noise_x;
+      this->particles[i].y = v_theta * (cos_theta - cos(phi_theta)) + noise_y;
+      this->particles[i].theta = phi_theta + noise_theta;
+    }
+  }
 
 }
 
