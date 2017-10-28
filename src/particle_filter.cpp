@@ -18,6 +18,8 @@
 #include "particle_filter.h"
 
 using namespace std;
+const int NUMBER_OF_PARTICLES = 100; //50; //300;
+const double INITIAL_WEIGHT = 1.0;
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// Set the number of particles. Initialize all particles to first position (based on estimates of
@@ -25,8 +27,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
   is_initialized = true;
-  num_particles = 100;
-  double initial_weight = 1.0;
+  this->num_particles = NUMBER_OF_PARTICLES;
   default_random_engine gen;
   normal_distribution<double> dist_x(x, std[0]);
   normal_distribution<double> dist_y(y, std[1]);
@@ -38,10 +39,10 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     particle.x = dist_x(gen);
     particle.y = dist_y(gen);
     particle.theta = dist_theta(gen);
-    particle.weight = initial_weight;
+    particle.weight = INITIAL_WEIGHT;
 
-    weights.push_back(initial_weight);
-    particles.push_back(particle);
+    weights.push_back(INITIAL_WEIGHT);
+    particles.push_back(INITIAL_WEIGHT);
   }
 }
 
