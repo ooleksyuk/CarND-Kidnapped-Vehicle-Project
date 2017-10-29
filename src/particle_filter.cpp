@@ -88,10 +88,9 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
   // observed measurement to this particular landmark.
   // NOTE: this method will NOT be called by the grading code. But you will probably find it useful to
   //   implement this method and use it as a helper during the updateWeights phase.
-  const double ERROR = numeric_limits<double>::max();
   for (int i = 0; i < observations.size(); i++) {
     int closest_id = -1;
-    double min_distance = ERROR;
+    double min_distance = numeric_limits<double>::max();
 
     for (int j = 0; j < predicted.size(); j++) {
       double delta_x = predicted[j].x - observations[i].x;
@@ -99,7 +98,7 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
       double distance = delta_x * delta_x + delta_y + delta_y;
 
       if (distance < min_distance) {
-        closest_id = j;
+        closest_id = predicted[j].id;
         min_distance = distance;
       }
     }
@@ -186,9 +185,6 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     double weight = INITIAL_WEIGHT;
     double std_x = std_landmark[0];
     double std_y = std_landmark[1];
-    double num_x = 1 / (2 * std_x * std_x);
-    double num_y = 1 / (2 * std_y * std_y);
-    double denominator = sqrt(2.0 * M_PI * std_x * std_y);
 
     for (int j = 0; j < transformed_landmarks.size(); j++) {
       int obs_id = transformed_landmarks[j].id;
@@ -201,11 +197,10 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       double delta_x = obs_x - predicted_x;
       double delta_y = obs_y - predicted_y;
 
-      double a_x = num_x * delta_x * delta_x;
-      double a_y = num_y * delta_y * delta_y;
+      double a = 1 / (2 * std_x * std_x) * delta_x * delta_x;
+      double b = 1 / (2 * std_y * std_y) * delta_y * delta_y;
 
-      double exponential = exp(-(a_x + a_y)) / denominator;
-      weight *= exponential;
+      weight *= exp(-(a + b)) / sqrt(2.0 * M_PI * std_x * std_y);
     }
 
     if (weight == 0) {
@@ -226,10 +221,10 @@ void ParticleFilter::resample() {
   default_random_engine gen;
   discrete_distribution<int> index(weights.begin(), weights.end());
 
-  for (int i = 0; i < NUMBER_OF_PARTICLES; i++) {
+  for (int i = 0; i < num_particles; i++) {
     int  idx = index(gen);
     Particle particle;
-//    particle.id = idx;
+    particle.id = idx;
     particle.x = particles[idx].x;
     particle.y = particles[idx].y;
     particle.theta = particles[idx].theta;
