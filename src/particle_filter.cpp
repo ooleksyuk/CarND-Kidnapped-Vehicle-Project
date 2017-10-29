@@ -1,7 +1,7 @@
 /*
  * particle_filter.cpp
  *
- *  Created on: October 27, 2017
+ * Created on: October 27, 2017
  *      Author: Olga Oleksyuk https://github.com/ooleksyuk
  */
 
@@ -10,18 +10,16 @@
 #include <iostream>
 #include <numeric>
 #include <math.h>
-#include <iostream>
 #include <sstream>
 #include <string>
 #include <iterator>
 #include "particle_filter.h"
 
 using namespace std;
-
-const int NUMBER_OF_PARTICLES = 100; //50; //300;
-const double INITIAL_WEIGHT = 1.0;
-const double THRESHOLD = 0.001;
-const double INITIAL_VAL = 0.0;
+#define NUMBER_OF_PARTICLES 100
+#define EPS 0.00001
+#define INITIAL_WEIGHT 1.0
+#define MIN_DISTANCE numeric_limits<double>::max()
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
   // Set the number of particles. Initialize all particles to first position (based on estimates of
@@ -31,6 +29,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
   if (is_initialized) {
     return;
   } else {
+    is_initialized = true;
     num_particles = NUMBER_OF_PARTICLES;
     default_random_engine gen;
     normal_distribution<double> dist_x(x, std[0]);
@@ -48,7 +47,6 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
       weights.push_back(INITIAL_WEIGHT);
       particles.push_back(particle);
     }
-    is_initialized = true;
   }
 }
 
@@ -58,11 +56,10 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
   //  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
   //  http://www.cplusplus.com/reference/random/default_random_engine/
   default_random_engine gen;
-  double MOVING_STRAIGHT = fabs(yaw_rate) < THRESHOLD;
-
-  normal_distribution<double> dist_x(INITIAL_VAL, std_pos[0]);
-  normal_distribution<double> dist_y(INITIAL_VAL, std_pos[1]);
-  normal_distribution<double> dist_theta(INITIAL_VAL, std_pos[2]);
+  double MOVING_STRAIGHT = abs(yaw_rate) < EPS;
+  normal_distribution<double> dist_x(0.0, std_pos[0]);
+  normal_distribution<double> dist_y(0.0, std_pos[1]);
+  normal_distribution<double> dist_theta(0.0, std_pos[2]);
 
   for (int i = 0; i < num_particles; i++) {
     double theta = particles[i].theta;
@@ -90,15 +87,15 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
   //   implement this method and use it as a helper during the updateWeights phase.
   for (int i = 0; i < observations.size(); i++) {
     int closest_id = -1;
-    double min_distance = numeric_limits<double>::max();
+    double min_distance = MIN_DISTANCE;
 
     for (int j = 0; j < predicted.size(); j++) {
       double delta_x = predicted[j].x - observations[i].x;
       double delta_y = predicted[j].y - observations[i].y;
-      double distance = delta_x * delta_x + delta_y + delta_y;
+      double distance = delta_x * delta_x + delta_y * delta_y;
 
       if (distance < min_distance) {
-        closest_id = predicted[j].id;
+        closest_id = j;
         min_distance = distance;
       }
     }
@@ -107,7 +104,7 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
-    const std::vector<LandmarkObs> &observations, const Map &map_landmarks) {
+                                   const std::vector<LandmarkObs> &observations, const Map &map_landmarks) {
   // Update the weights of each particle using a mult-variate Gaussian distribution. You can read
   //   more about this distribution here: https://en.wikipedia.org/wiki/Multivariate_normal_distribution
   // NOTE: The observations are given in the VEHICLE'S coordinate system. Your particles are located
@@ -118,7 +115,6 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
   //   and the following is a good resource for the actual equation to implement (look at equation
   //   3.33
   //   http://planning.cs.uiuc.edu/node99.html
-
   for (int i = 0; i < num_particles; i++) {
     double p_x = particles[i].x;
     double p_y = particles[i].y;
@@ -133,7 +129,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
      * exactly where the particle is and is oriented the same way as particle
      */
     for (int j = 0; j < observations.size(); j++) {
-      double obs_id = observations[j].id;
+      int obs_id = observations[j].id;
       double obs_x = observations[j].x;
       double obs_y = observations[j].y;
 
@@ -155,11 +151,11 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       double landmark_x = map_landmarks.landmark_list[j].x_f;
       double landmark_y = map_landmarks.landmark_list[j].y_f;
 
-      double delta_x = landmark_x - p_x;
-      double delta_y = landmark_y - p_y;
-      double delta_error = sqrt(delta_x * delta_x + delta_y * delta_y);
+      double distance_x = landmark_x - p_x;
+      double distance_y = landmark_y - p_y;
+      double distance = sqrt(distance_x * distance_x + distance_y * distance_y);
 
-      if (delta_error < sensor_range) {
+      if (distance < sensor_range) {
         LandmarkObs landmark_in_range;
         landmark_in_range.id = landmark_id;
         landmark_in_range.x = landmark_x;
@@ -175,17 +171,17 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
      * Note: All landmarks are in map coordinates
      *       All observations are in map coordinates
      */
-      dataAssociation(landmarks_in_range, transformed_landmarks);
+    dataAssociation(landmarks_in_range, transformed_landmarks);
 
     /**
      * STEP 4: Compare each observation by vehicle `map_observations`
      * to observation by particle landmarks_in_range
      * Update particle weight based on result of the comprehension
      */
-    double weight = INITIAL_WEIGHT;
     double std_x = std_landmark[0];
     double std_y = std_landmark[1];
 
+    double weight = INITIAL_WEIGHT;
     for (int j = 0; j < transformed_landmarks.size(); j++) {
       int obs_id = transformed_landmarks[j].id;
       double obs_x = transformed_landmarks[j].x;
@@ -197,19 +193,14 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       double delta_x = obs_x - predicted_x;
       double delta_y = obs_y - predicted_y;
 
-      double a = 1 / (2 * std_x * std_x) * delta_x * delta_x;
-      double b = 1 / (2 * std_y * std_y) * delta_y * delta_y;
+      double a = (1 / (2*(std_x * std_x))) * delta_x * delta_x;
+      double b = (1 / (2*(std_y * std_y))) * delta_y * delta_y;
 
-      weight *= exp(-(a + b)) / sqrt(2.0 * M_PI * std_x * std_y);
+      weight *= exp(-(a + b)) / sqrt( 2.0 * M_PI * std_x * std_y);
     }
 
-    if (weight == 0) {
-      particles[i].weight = THRESHOLD;
-      weights[i] = THRESHOLD;
-    } else {
-      particles[i].weight = weight;
-      weights[i] = weight;
-    }
+    particles[i].weight = weight;
+    weights[i] = weight;
   }
 }
 
@@ -222,9 +213,8 @@ void ParticleFilter::resample() {
   discrete_distribution<int> index(weights.begin(), weights.end());
 
   for (int i = 0; i < num_particles; i++) {
-    int  idx = index(gen);
+    const int idx = index(gen);
     Particle particle;
-    particle.id = idx;
     particle.x = particles[idx].x;
     particle.y = particles[idx].y;
     particle.theta = particles[idx].theta;
@@ -251,7 +241,7 @@ Particle ParticleFilter::SetAssociations(Particle particle, std::vector<int> ass
   particle.sense_x = sense_x;
   particle.sense_y = sense_y;
 
-   return particle;
+  return particle;
 }
 
 string ParticleFilter::getAssociations(Particle best)
@@ -263,6 +253,7 @@ string ParticleFilter::getAssociations(Particle best)
   s = s.substr(0, s.length()-1);  // get rid of the trailing space
   return s;
 }
+
 string ParticleFilter::getSenseX(Particle best)
 {
   vector<double> v = best.sense_x;
@@ -272,6 +263,7 @@ string ParticleFilter::getSenseX(Particle best)
   s = s.substr(0, s.length()-1);  // get rid of the trailing space
   return s;
 }
+
 string ParticleFilter::getSenseY(Particle best)
 {
   vector<double> v = best.sense_y;
