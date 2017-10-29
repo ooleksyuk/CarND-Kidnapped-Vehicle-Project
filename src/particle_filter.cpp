@@ -131,7 +131,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     const double p_theta = this->particles[i].theta;
 
     vector<LandmarkObs> landmarks_in_range;
-    vector<LandmarkObs> transformed_coordinates;
+    vector<LandmarkObs> transformed_landmarks;
 
     /*******************************************************************
      * STEP 1: Transform coordinates of landmarks from vehicle perspective to
@@ -140,7 +140,76 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
      */
     for (int j = 0; j < observations.size(); j++) {
       double obs_id = observations[j].id;
+      double obs_x = observations[j].x;
+      double obs_y = observations[j].y;
+
+      double transformed_x = p_x + obs_x * cos(p_theta) - obs_y * sin(p_theta);
+      double transformed_y = p_y + obs_y * cos(p_theta) + obs_x * sin(p_theta);
+
+      LandmarkObs transformed_landmark;
+      transformed_landmark.id = obs_id;
+      transformed_landmark.x = transformed_x;
+      transformed_landmark.y = transformed_y;
+
+      transformed_landmarks.push_back(transformed_landmark);
     }
+    /**
+     * STEP 2: Find landmarks within sensor range
+     */
+    for (int j = 0; j < map_landmarks.landmark_list.size(); j++) {
+      int landmark_id = map_landmarks.landmark_list[j].id_i;
+      double landmark_x = map_landmarks.landmark_list[j].x_f;
+      double landmark_y = map_landmarks.landmark_list[j].y_f;
+
+      double distance_x = landmark_x - p_x;
+      double distance_y = landmark_y - p_y;
+      double distance = sqrt(distance_x * distance_x + distance_y * distance_y);
+
+      if (distance < sensor_range) {
+        LandmarkObs landmark_in_range;
+        landmark_in_range.id = landmark_id;
+        landmark_in_range.x = landmark_x;
+        landmark_in_range.y = landmark_y;
+
+        landmarks_in_range.push_back(landmark_in_range);
+      }
+    }
+
+    /**
+     * STEP 3: Associate landmark in range by `id` with observation landmark
+     * this function modifies `std::vector<LandmarkObs>` observations
+     * Note: All landmarks are in map coordinates
+     *       All observations are in map coordinates
+     */
+    this->dataAssociation(landmarks_in_range, transformed_landmarks);
+
+    /**
+     * STEP 4: Compare each observation by vehicle `map_observations`
+     * to observation by particle landmarks_in_range
+     * Update particle weight based on result of the comprehension
+     */
+    double weight = INITIAL_WEIGHT;
+
+    for (int j = 0; j < transformed_landmarks.size(); j++) {
+      int obs_id = transformed_landmarks[j].id;
+      double obs_x = transformed_landmarks[j].x;
+      double obs_y = transformed_landmarks[j].y;
+
+      double predicted_x = landmarks_in_range[obs_id].x;
+      double predicted_y = landmarks_in_range[obs_id].y;
+
+      double d_x = obs_x - predicted_x;
+      double d_y = obs_y - predicted_y;
+
+      double a_x = num_x * d_x * d_x;
+      double a_y = num_y * d_y * d_y;
+
+      double exponential = exp(-(a_x + a_y)) / denominator;
+      weight *= exponential;
+    }
+
+    particles[i].weight = weight;
+    weights[i] = weight;
   }
 }
 
