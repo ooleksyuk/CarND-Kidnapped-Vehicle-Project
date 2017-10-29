@@ -1,8 +1,8 @@
 /*
  * particle_filter.cpp
  *
- *  Created on: Dec 12, 2016
- *      Author: Tiffany Huang
+ *  Created on: October 27, 2017
+ *      Author: Olga Oleksyuk https://github.com/ooleksyuk
  */
 
 #include <random>
@@ -14,10 +14,10 @@
 #include <sstream>
 #include <string>
 #include <iterator>
-
 #include "particle_filter.h"
 
 using namespace std;
+
 const int NUMBER_OF_PARTICLES = 100; //50; //300;
 const double INITIAL_WEIGHT = 1.0;
 
@@ -32,7 +32,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
   normal_distribution<double> dist_y(y, std[1]);
   normal_distribution<double> dist_theta(theta, std[2]);
 
-  for (int i = 0; i < num_particles; i++) {
+  for (int i = 0; i < NUMBER_OF_PARTICLES; i++) {
     Particle particle;
     particle.id = i;
     particle.x = dist_x(gen);
@@ -71,13 +71,13 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
     const double noise_theta = dist_theta(gen);
 
     if (MOVING_STRAIGHT) {
-      this->particles[i].x = v_theta * cos_theta + noise_x;
-      this->particles[i].y = v_theta * sin_theta + noise_y;
+      this->particles[i].x += v_theta * cos_theta + noise_x;
+      this->particles[i].y += v_theta * sin_theta + noise_y;
       this->particles[i].theta += noise_theta;
     } else {
       const double phi_theta = theta + delta_theta;
-      this->particles[i].x = v_theta * (sin(phi_theta) - sin_theta) + noise_x;
-      this->particles[i].y = v_theta * (cos_theta - cos(phi_theta)) + noise_y;
+      this->particles[i].x += v_theta * (sin(phi_theta) - sin_theta) + noise_x;
+      this->particles[i].y += v_theta * (cos_theta - cos(phi_theta)) + noise_y;
       this->particles[i].theta = phi_theta + noise_theta;
     }
   }
@@ -98,7 +98,7 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
       const double delta_y = predicted[j].y - observations[j].y;
       const double error = delta_x * delta_x + delta_y + delta_y;
 
-      if (current_error < error) {
+      if (error < current_error) {
         current_observation = j;
         current_error = error;
       }
@@ -163,9 +163,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
       double distance_x = landmark_x - p_x;
       double distance_y = landmark_y - p_y;
-      double distance = sqrt(distance_x * distance_x + distance_y * distance_y);
+      double distance_error = sqrt(distance_x * distance_x + distance_y * distance_y);
 
-      if (distance < sensor_range) {
+      if (distance_error < sensor_range) {
         LandmarkObs landmark_in_range;
         landmark_in_range.id = landmark_id;
         landmark_in_range.x = landmark_x;
