@@ -1,7 +1,7 @@
 /*
  * particle_filter.cpp
  *
- * Created on: October 27, 2017
+ *  Created on: October 27, 2017
  *      Author: Olga Oleksyuk https://github.com/ooleksyuk
  */
 
@@ -29,7 +29,6 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
   if (is_initialized) {
     return;
   } else {
-    is_initialized = true;
     num_particles = NUMBER_OF_PARTICLES;
     default_random_engine gen;
     normal_distribution<double> dist_x(x, std[0]);
@@ -47,6 +46,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
       weights.push_back(INITIAL_WEIGHT);
       particles.push_back(particle);
     }
+    is_initialized = true;
   }
 }
 
@@ -193,10 +193,10 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       double delta_x = obs_x - predicted_x;
       double delta_y = obs_y - predicted_y;
 
-      double a = (1 / (2*(std_x * std_x))) * delta_x * delta_x;
-      double b = (1 / (2*(std_y * std_y))) * delta_y * delta_y;
+      double a = (1 / (2 * std_x * std_x)) * delta_x * delta_x;
+      double b = (1 / (2 * std_y * std_y)) * delta_y * delta_y;
 
-      weight *= exp(-(a + b)) / sqrt( 2.0 * M_PI * std_x * std_y);
+      weight *= exp(-(a + b)) / sqrt(2.0 * M_PI * std_x * std_y);
     }
 
     particles[i].weight = weight;
@@ -215,6 +215,7 @@ void ParticleFilter::resample() {
   for (int i = 0; i < num_particles; i++) {
     const int idx = index(gen);
     Particle particle;
+    particle.id = idx;
     particle.x = particles[idx].x;
     particle.y = particles[idx].y;
     particle.theta = particles[idx].theta;
