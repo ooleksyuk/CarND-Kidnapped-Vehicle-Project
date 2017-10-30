@@ -16,7 +16,7 @@
 #include "particle_filter.h"
 
 using namespace std;
-#define NUMBER_OF_PARTICLES 100
+#define NUMBER_OF_PARTICLES 150
 #define EPS 0.00001
 #define INITIAL_WEIGHT 1.0
 #define MIN_DISTANCE numeric_limits<double>::max()
@@ -180,6 +180,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
      */
     double std_x = std_landmark[0];
     double std_y = std_landmark[1];
+    double denominator = sqrt(2.0 * M_PI * std_x * std_y);
+    double a_denominator = 2 * std_x * std_x;
+    double b_denominator = 2 * std_y * std_y;
 
     double weight = INITIAL_WEIGHT;
     for (int j = 0; j < transformed_landmarks.size(); j++) {
@@ -193,14 +196,18 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       double delta_x = obs_x - predicted_x;
       double delta_y = obs_y - predicted_y;
 
-      double a = (1 / (2 * std_x * std_x)) * delta_x * delta_x;
-      double b = (1 / (2 * std_y * std_y)) * delta_y * delta_y;
+      double a = delta_x * delta_x / a_denominator;
+      double b = delta_y * delta_y / b_denominator;
 
-      weight *= exp(-(a + b)) / sqrt(2.0 * M_PI * std_x * std_y);
+      weight *= exp(-(a + b)) / denominator;
     }
-
-    particles[i].weight = weight;
-    weights[i] = weight;
+    if (weight == 0) {
+      particles[i].weight = EPS;
+      weights[i] = EPS;
+    } else {
+      particles[i].weight = weight;
+      weights[i] = weight;
+    }
   }
 }
 
